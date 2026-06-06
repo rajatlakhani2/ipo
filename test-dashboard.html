@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard Test</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>Dashboard API Test</h1>
+    <button onclick="testDashboard()">Test Dashboard API</button>
+    <div id="result"></div>
+
+    <script>
+        async function testDashboard() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Testing...';
+            
+            try {
+                const response = await fetch('http://127.0.0.1:5001/api/dashboard/summary');
+                
+                if (!response.ok) {
+                    resultDiv.innerHTML = `<p class="error">❌ API Error: ${response.status} ${response.statusText}</p>`;
+                    return;
+                }
+                
+                const data = await response.json();
+                resultDiv.innerHTML = `
+                    <h2 class="success">✅ Dashboard API Working!</h2>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                    <p><strong>The dashboard should display these values.</strong></p>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="error">❌ Connection Error: ${error.message}</p>
+                    <p>Make sure backend is running: <code>python app.py</code></p>`;
+            }
+        }
+    </script>
+</body>
+</html>

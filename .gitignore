@@ -1,0 +1,41 @@
+# Secrets & local config
+.env
+.env.local
+*.pem
+*.key
+
+# Database
+*.sqlite
+*.sqlite3
+*.db
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+venv/
+.venv/
+env/
+ENV/
+
+# IDE & OS
+.vscode/
+.cursor/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Logs & temp
+*.log
+tmp/
+temp/
+
+# Docker local data
+postgres_data/
+
+# Test / coverage
+.pytest_cache/
+.coverage
+htmlcov/

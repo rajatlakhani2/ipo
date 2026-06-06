@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IPO Dashboard - Test Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #45a049;
+        }
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        h1 {
+            color: #333;
+        }
+        h2 {
+            color: #666;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 IPO Dashboard - API Test Page</h1>
+    <p>Use this page to test if your backend is working correctly.</p>
+
+    <div class="test-section">
+        <h2>1. Test Backend Connection</h2>
+        <button class="test-button" onclick="testBackend()">Test Connection</button>
+        <div id="backend-result" class="result" style="display:none;"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>2. Test Investors API</h2>
+        <button class="test-button" onclick="testInvestors()">Get Investors</button>
+        <div id="investors-result" class="result" style="display:none;"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>3. Test IPOs API</h2>
+        <button class="test-button" onclick="testIPOs()">Get IPOs</button>
+        <div id="ipos-result" class="result" style="display:none;"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>4. Test Applications API</h2>
+        <button class="test-button" onclick="testApplications()">Get Applications</button>
+        <div id="applications-result" class="result" style="display:none;"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>5. Test Quick Apply</h2>
+        <p>This will create a test application (if you have investors and IPOs)</p>
+        <button class="test-button" onclick="testQuickApply()">Test Quick Apply</button>
+        <div id="quickapply-result" class="result" style="display:none;"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>📋 Summary</h2>
+        <div id="summary" class="result info">
+            Click the test buttons above to check your setup.
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://127.0.0.1:5001/api';
+        let testResults = {
+            backend: false,
+            investors: false,
+            ipos: false,
+            applications: false
+        };
+
+        function showResult(elementId, message, isSuccess) {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.className = 'result ' + (isSuccess ? 'success' : 'error');
+            element.textContent = message;
+            updateSummary();
+        }
+
+        function updateSummary() {
+            const summary = document.getElementById('summary');
+            const passed = Object.values(testResults).filter(v => v).length;
+            const total = Object.keys(testResults).length;
+            
+            if (passed === total) {
+                summary.className = 'result success';
+                summary.innerHTML = `✅ All tests passed! (${passed}/${total})<br>Your backend is working correctly. You can now use the main application.`;
+            } else {
+                summary.className = 'result info';
+                summary.innerHTML = `Tests passed: ${passed}/${total}<br>Complete all tests to verify your setup.`;
+            }
+        }
+
+        async function testBackend() {
+            try {
+                const response = await fetch(`${API_BASE}/investors`);
+                if (response.ok) {
+                    testResults.backend = true;
+                    showResult('backend-result', '✅ Backend is running and accessible!', true);
+                } else {
+                    testResults.backend = false;
+                    showResult('backend-result', `❌ Backend responded with status: ${response.status}`, false);
+                }
+            } catch (error) {
+                testResults.backend = false;
+                showResult('backend-result', `❌ Cannot connect to backend: ${error.message}`, false);
+            }
+        }
+
+        async function testInvestors() {
+            try {
+                const response = await fetch(`${API_BASE}/investors`);
+                const data = await response.json();
+                testResults.investors = true;
+                showResult('investors-result', `✅ Found ${data.length} investors\n${JSON.stringify(data, null, 2)}`, true);
+            } catch (error) {
+                testResults.investors = false;
+                showResult('investors-result', `❌ Error: ${error.message}`, false);
+            }
+        }
+
+        async function testIPOs() {
+            try {
+                const response = await fetch(`${API_BASE}/ipos`);
+                const data = await response.json();
+                testResults.ipos = true;
+                showResult('ipos-result', `✅ Found ${data.length} IPOs\n${JSON.stringify(data, null, 2)}`, true);
+            } catch (error) {
+                testResults.ipos = false;
+                showResult('ipos-result', `❌ Error: ${error.message}`, false);
+            }
+        }
+
+        async function testApplications() {
+            try {
+                const response = await fetch(`${API_BASE}/applications`);
+                const data = await response.json();
+                testResults.applications = true;
+                showResult('applications-result', `✅ Found ${data.length} applications\n${JSON.stringify(data, null, 2)}`, true);
+            } catch (error) {
+                testResults.applications = false;
+                showResult('applications-result', `❌ Error: ${error.message}`, false);
+            }
+        }
+
+        async function testQuickApply() {
+            try {
+                // First get investors and IPOs
+                const [investorsRes, iposRes] = await Promise.all([
+                    fetch(`${API_BASE}/investors`),
+                    fetch(`${API_BASE}/ipos`)
+                ]);
+                
+                const investors = await investorsRes.json();
+                const ipos = await iposRes.json();
+                
+                if (investors.length === 0) {
+                    showResult('quickapply-result', '❌ No investors found. Please add investors first.', false);
+                    return;
+                }
+                
+                if (ipos.length === 0) {
+                    showResult('quickapply-result', '❌ No IPOs found. Please add IPOs first.', false);
+                    return;
+                }
+                
+                // Create test application
+                const testInvestor = investors[0];
+                const testIPO = ipos[0];
+                const amount = testIPO.num_shares * testIPO.purchase_price_per_share;
+                
+                const response = await fetch(`${API_BASE}/applications`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        investor_id: testInvestor.id,
+                        ipo_id: testIPO.id,
+                        application_amount: amount,
+                        status: 'Applied',
+                        payment_status: 'Pending',
+                        bank_name: testInvestor.upi || 'TEST_UPI'
+                    })
+                });
+                
+                if (response.ok) {
+                    showResult('quickapply-result', `✅ Test application created successfully!\nInvestor: ${testInvestor.name}\nIPO: ${testIPO.ipo_name}\nAmount: ₹${amount}`, true);
+                } else {
+                    const error = await response.text();
+                    showResult('quickapply-result', `❌ Failed to create application: ${error}`, false);
+                }
+            } catch (error) {
+                showResult('quickapply-result', `❌ Error: ${error.message}`, false);
+            }
+        }
+    </script>
+</body>
+</html>

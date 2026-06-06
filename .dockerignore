@@ -1,0 +1,10 @@
+__pycache__
+*.pyc
+*.sqlite
+.env
+.git
+.vscode
+*.md
+test-*.js
+run-tests.js
+agent-transcripts

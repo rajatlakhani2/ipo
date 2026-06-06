@@ -1,0 +1,978 @@
+// Global state
+let investors = [];
+let ipos = [];
+let applications = [];
+
+// API Base URL
+const API_BASE = 'http://127.0.0.1:5001/api';
+
+// Initialize
+document.addEventListener('DOMContentLoaded', () => {
+    setupNavigation();
+    setupThemeToggle();
+    setupSidebarToggle();
+
+    // Load default view
+    setTimeout(() => {
+        loadView('dashboard');
+    }, 100);
+});
+
+// Navigation Handling
+function setupNavigation() {
+    const navItems = document.querySelectorAll('.sidebar nav li');
+    navItems.forEach(item => {
+        item.addEventListener('click', () => {
+            navItems.forEach(nav => nav.classList.remove('active'));
+            item.classList.add('active');
+            const view = item.dataset.view;
+            loadView(view);
+        });
+    });
+}
+
+// Theme Toggle
+function setupThemeToggle() {
+    const themeToggle = document.getElementById('theme-toggle');
+    themeToggle.addEventListener('click', () => {
+        document.body.classList.toggle('dark-mode');
+        const icon = themeToggle.querySelector('i');
+        if (document.body.classList.contains('dark-mode')) {
+            icon.classList.remove('fa-moon');
+            icon.classList.add('fa-sun');
+        } else {
+            icon.classList.remove('fa-sun');
+            icon.classList.add('fa-moon');
+        }
+    });
+}
+
+// Sidebar Toggle
+function setupSidebarToggle() {
+    const sidebar = document.getElementById('sidebar');
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+
+    if (sidebarToggle) {
+        sidebarToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('collapsed');
+            const icon = sidebarToggle.querySelector('i');
+            if (sidebar.classList.contains('collapsed')) {
+                icon.classList.remove('fa-chevron-left');
+                icon.classList.add('fa-chevron-right');
+            } else {
+                icon.classList.remove('fa-chevron-right');
+                icon.classList.add('fa-chevron-left');
+            }
+        });
+    }
+}
+
+// Load View
+function loadView(view) {
+    const contentArea = document.getElementById('content-area');
+
+    if (view === 'dashboard') {
+        loadDashboardView();
+    } else if (view === 'investors') {
+        loadInvestorsView();
+    } else if (view === 'ipos') {
+        loadIPOsView();
+    } else if (view === 'applications') {
+        loadApplicationsView();
+    } else if (view === 'reports') {
+        loadReportsView();
+    } else if (view === 'settings') {
+        loadSettingsView();
+    } else {
+        contentArea.innerHTML = `<h1>${view.charAt(0).toUpperCase() + view.slice(1)} View</h1><p>Coming Soon...</p>`;
+    }
+}
+
+// Dashboard View
+async function loadDashboardView() {
+    const contentArea = document.getElementById('content-area');
+    contentArea.innerHTML = '<h1>Loading...</h1>';
+
+    try {
+        const response = await fetch(`${API_BASE}/dashboard/summary`);
+        const summary = await response.json();
+
+        contentArea.innerHTML = `
+            <div class="header-actions">
+                <h1>Dashboard Overview</h1>
+            </div>
+            
+            <div class="dashboard-grid">
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-wallet"></i></div>
+                    <div class="stat-value">${formatCurrency(summary.total_invested)}</div>
+                    <div class="stat-label">Total Invested</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-chart-line"></i></div>
+                    <div class="stat-value" style="color: ${summary.total_profit >= 0 ? 'var(--success-color)' : 'var(--danger-color)'}">${formatCurrency(summary.total_profit)}</div>
+                    <div class="stat-label">Total Profit</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-file-alt"></i></div>
+                    <div class="stat-value">${summary.total_applications}</div>
+                    <div class="stat-label">Total Applications</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+                    <div class="stat-value">${summary.total_allotted}</div>
+                    <div class="stat-label">Allotted</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-clock"></i></div>
+                    <div class="stat-value">${summary.total_applied}</div>
+                    <div class="stat-label">Applied</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-times-circle"></i></div>
+                    <div class="stat-value">${summary.total_not_allotted}</div>
+                    <div class="stat-label">Not Allotted</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-university"></i></div>
+                    <div class="stat-value">${formatCurrency(summary.bank_balance_required)}</div>
+                    <div class="stat-label">Bank Balance Required</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-lock"></i></div>
+                    <div class="stat-value">${formatCurrency(summary.amount_blocked)}</div>
+                    <div class="stat-label">Amount Blocked in IPO</div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2 style="margin-bottom: 20px;">Recent Activity</h2>
+                <p style="color: var(--text-color);">View detailed reports in the Reports section.</p>
+            </div>
+        `;
+    } catch (error) {
+        console.error('Error loading dashboard:', error);
+        contentArea.innerHTML = '<h1>Error loading dashboard</h1>';
+    }
+}
+
+// Investors View
+async function loadInvestorsView() {
+    const contentArea = document.getElementById('content-area');
+    contentArea.innerHTML = '<h1>Loading...</h1>';
+
+    try {
+        const response = await fetch(`${API_BASE}/investors`);
+        investors = await response.json();
+
+        contentArea.innerHTML = `
+            <div class="header-actions">
+                <h1>Investor Management</h1>
+                <div>
+                    <button class="btn btn-secondary" onclick="openImportModal()">
+                        <i class="fas fa-upload"></i> Import Excel
+                    </button>
+                    <button class="btn btn-primary" onclick="openInvestorModal()">
+                        <i class="fas fa-plus"></i> Add Investor
+                    </button>
+                </div>
+            </div>
+            
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>UPI ID</th>
+                            <th>Family Group</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${investors.map(inv => `
+                            <tr>
+                                <td><strong>${inv.name}</strong></td>
+                                <td>${inv.upi || '-'}</td>
+                                <td><span class="status-badge">${inv.family_group}</span></td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <button class="btn-icon" onclick="editInvestor(${inv.id})" title="Edit">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn-icon delete" onclick="deleteInvestor(${inv.id})" title="Delete">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+        // Add modals
+        addInvestorModal();
+        addImportModal();
+    } catch (error) {
+        console.error('Error loading investors:', error);
+    }
+}
+
+// IPOs View
+async function loadIPOsView() {
+    const contentArea = document.getElementById('content-area');
+    contentArea.innerHTML = '<h1>Loading...</h1>';
+
+    try {
+        const response = await fetch(`${API_BASE}/ipos`);
+        ipos = await response.json();
+
+        contentArea.innerHTML = `
+            <div class="header-actions">
+                <h1>IPO Management</h1>
+                <button class="btn btn-primary" onclick="openIPOModal()">
+                    <i class="fas fa-plus"></i> Add IPO
+                </button>
+            </div>
+            
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>IPO Name</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>Shares</th>
+                            <th>Buy Price</th>
+                            <th>Sell Price</th>
+                            <th>Profit</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${ipos.map(ipo => `
+                            <tr>
+                                <td>
+                                    <strong>${ipo.ipo_name}</strong><br>
+                                    <small style="color: var(--text-color); opacity: 0.7;">${formatDate(ipo.ipo_date)}</small>
+                                </td>
+                                <td><span class="status-badge">${ipo.ipo_type || 'Mainboard'}</span></td>
+                                <td><span class="status-badge ${ipo.status === 'Open' ? 'allotted' : 'pending'}">${ipo.status || 'Open'}</span></td>
+                                <td>${ipo.num_shares}</td>
+                                <td>${formatCurrency(ipo.purchase_price_per_share)}</td>
+                                <td>${ipo.sale_price_per_share ? formatCurrency(ipo.sale_price_per_share) : '-'}</td>
+                                <td style="color: ${ipo.profit >= 0 ? 'var(--success-color)' : 'var(--danger-color)'}; font-weight: 600;">
+                                    ${formatCurrency(ipo.profit)}
+                                </td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <button class="btn-icon" onclick="openBulkApplyModal(${ipo.id})" title="Bulk Apply" style="color: var(--primary-color);">
+                                            <i class="fas fa-users"></i>
+                                        </button>
+                                        <button class="btn-icon" onclick="editIPO(${ipo.id})" title="Edit">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn-icon delete" onclick="deleteIPO(${ipo.id})" title="Delete">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+        addIPOModal();
+        addBulkApplyModal();
+    } catch (error) {
+        console.error('Error loading IPOs:', error);
+    }
+}
+
+function addBulkApplyModal() {
+    if (document.getElementById('bulk-apply-modal')) return;
+
+    const modal = document.createElement('div');
+    modal.id = 'bulk-apply-modal';
+    modal.className = 'modal hidden';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Bulk Apply</h2>
+                <button class="close" onclick="closeModal('bulk-apply-modal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="bulk-apply-form">
+                <input type="hidden" id="bulk-ipo-id">
+                <div class="form-group">
+                    <label>IPO Name</label>
+                    <input type="text" id="bulk-ipo-name" readonly style="background: var(--bg-color); opacity: 0.7;">
+                </div>
+                
+                <div class="form-group">
+                    <label>Select Investors</label>
+                    <div class="bulk-actions">
+                        <button type="button" class="btn btn-secondary" onclick="selectAllInvestors(true)">Select All</button>
+                        <button type="button" class="btn btn-secondary" onclick="selectAllInvestors(false)">Deselect All</button>
+                    </div>
+                    <div class="checkbox-list" id="investor-checkbox-list">
+                        <!-- Checkboxes will be populated here -->
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Application Amount (per investor) *</label>
+                    <input type="number" step="0.01" id="bulk-amount" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Bank Name (Optional - applies to all)</label>
+                    <input type="text" id="bulk-bank" placeholder="e.g. HDFC Bank">
+                </div>
+
+                <button type="submit" class="btn btn-primary">Apply for Selected</button>
+            </form>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    document.getElementById('bulk-apply-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const ipoId = document.getElementById('bulk-ipo-id').value;
+        const amount = parseFloat(document.getElementById('bulk-amount').value);
+        const bankName = document.getElementById('bulk-bank').value;
+
+        const checkboxes = document.querySelectorAll('#investor-checkbox-list input[type="checkbox"]:checked');
+        const selectedInvestorIds = Array.from(checkboxes).map(cb => cb.value);
+
+        if (selectedInvestorIds.length === 0) {
+            alert('Please select at least one investor.');
+            return;
+        }
+
+        if (confirm(\`Are you sure you want to apply for \${selectedInvestorIds.length} investors?\`)) {
+            let successCount = 0;
+            
+            for (const investorId of selectedInvestorIds) {
+                try {
+                    await fetch(`${ API_BASE } / applications`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            investor_id: parseInt(investorId),
+                            ipo_id: parseInt(ipoId),
+                            application_amount: amount,
+                            status: 'Applied',
+                            payment_status: 'Pending',
+                            bank_name: bankName
+                        })
+                    });
+                    successCount++;
+                } catch (error) {
+                    console.error('Error applying for investor ' + investorId, error);
+                }
+            }
+            
+            alert(\`Successfully applied for \${successCount} investors.\`);
+            closeModal('bulk-apply-modal');
+            loadApplicationsView(); // Switch to applications view to see results
+        }
+    });
+}
+
+async function openBulkApplyModal(ipoId) {
+    const ipo = ipos.find(i => i.id === ipoId);
+    if (!ipo) return;
+    
+    // Ensure investors are loaded
+    if (investors.length === 0) {
+        const response = await fetch(`${ API_BASE } / investors`);
+        investors = await response.json();
+    }
+    
+    document.getElementById('bulk-ipo-id').value = ipo.id;
+    document.getElementById('bulk-ipo-name').value = ipo.ipo_name;
+    document.getElementById('bulk-amount').value = ipo.purchase_price_per_share * ipo.num_shares; // Default amount
+    document.getElementById('bulk-bank').value = '';
+    
+    const listContainer = document.getElementById('investor-checkbox-list');
+    listContainer.innerHTML = investors.map(inv => `
+        < div class= "checkbox-item" >
+        <input type="checkbox" id="inv-${inv.id}" value="${inv.id}">
+            <label for="inv-${inv.id}">${inv.name} <small style="opacity: 0.7;">(${inv.family_group})</small></label>
+        </div>
+    `).join('');
+    
+    document.getElementById('bulk-apply-modal').classList.remove('hidden');
+}
+
+function selectAllInvestors(select) {
+    const checkboxes = document.querySelectorAll('#investor-checkbox-list input[type="checkbox"]');
+    checkboxes.forEach(cb => cb.checked = select);
+}
+
+// Applications View
+async function loadApplicationsView() {
+    const contentArea = document.getElementById('content-area');
+    contentArea.innerHTML = '<h1>Loading...</h1>';
+
+    try {
+        const [invRes, ipoRes, appRes] = await Promise.all([
+            fetch(`${ API_BASE } / investors`),
+            fetch(`${ API_BASE } / ipos`),
+            fetch(`${ API_BASE } / applications`)
+        ]);
+
+        investors = await invRes.json();
+        ipos = await ipoRes.json();
+        applications = await appRes.json();
+
+        contentArea.innerHTML = `
+        < div class= "header-actions" >
+                <h1>Application Tracking</h1>
+                <button class="btn btn-primary" onclick="openApplicationModal()">
+                    <i class="fas fa-plus"></i> Add Application
+                </button>
+            </div >
+
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Investor</th>
+                            <th>IPO</th>
+                            <th>Amount</th>
+                            <th>Bank</th>
+                            <th>Status</th>
+                            <th>Payment</th>
+                            <th>Profit</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${applications.map(app => {
+                            const investor = investors.find(i => i.id === app.investor_id);
+                            const ipo = ipos.find(i => i.id === app.ipo_id);
+                            return `
+                                <tr>
+                                    <td><strong>${investor ? investor.name : 'Unknown'}</strong></td>
+                                    <td>${ipo ? ipo.ipo_name : 'Unknown'}</td>
+                                    <td>${formatCurrency(app.application_amount)}</td>
+                                    <td>${app.bank_name || '-'}</td>
+                                    <td><span class="status-badge ${app.status.toLowerCase().replace(' ', '-')}">${app.status}</span></td>
+                                    <td><span class="status-badge ${app.payment_status.toLowerCase()}">${app.payment_status}</span></td>
+                                    <td style="color: ${app.profit >= 0 ? 'var(--success-color)' : 'var(--danger-color)'}; font-weight: 600;">
+                                        ${formatCurrency(app.profit)}
+                                    </td>
+                                    <td>
+                                        <div class="action-buttons">
+                                            <button class="btn-icon" onclick="editApplication(${app.id})" title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn-icon delete" onclick="deleteApplication(${app.id})" title="Delete">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+        addApplicationModal();
+    } catch (error) {
+        console.error('Error loading applications:', error);
+    }
+}
+
+// Reports View
+async function loadReportsView() {
+    const contentArea = document.getElementById('content-area');
+    contentArea.innerHTML = '<h1>Loading...</h1>';
+
+    try {
+        const [bankStatsRes, ipoProfitRes] = await Promise.all([
+            fetch(`${ API_BASE } / reports / bank - stats`),
+            fetch(`${ API_BASE } / reports / ipo - profit`)
+        ]);
+
+        const bankStats = await bankStatsRes.json();
+        const ipoProfit = await ipoProfitRes.json();
+
+        contentArea.innerHTML = `
+        < div class= "header-actions" >
+        <h1>Reports & Analytics</h1>
+            </div >
+            
+            <div class="card">
+                <h2 style="margin-bottom: 20px;">Bank-wise Statistics</h2>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Bank Name</th>
+                                <th>Blocked Amount</th>
+                                <th>Invested Amount</th>
+                                <th>Blocked Count</th>
+                                <th>Invested Count</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${bankStats.map(stat => `
+                                <tr>
+                                    <td><strong>${stat.bank_name}</strong></td>
+                                    <td>${formatCurrency(stat.blocked_amount)}</td>
+                                    <td>${formatCurrency(stat.invested_amount)}</td>
+                                    <td>${stat.blocked_count}</td>
+                                    <td>${stat.invested_count}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card" style="margin-top: 24px;">
+                <h2 style="margin-bottom: 20px;">IPO Profit Summary</h2>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>IPO Name</th>
+                                <th>Allotted Count</th>
+                                <th>Total Profit</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${ipoProfit.map(ipo => `
+                                <tr>
+                                    <td><strong>${ipo.ipo_name}</strong></td>
+                                    <td>${ipo.allotted_count}</td>
+                                    <td style="color: ${ipo.profit >= 0 ? 'var(--success-color)' : 'var(--danger-color)'}; font-weight: 600;">
+                                        ${formatCurrency(ipo.profit)}
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+    } catch (error) {
+        console.error('Error loading reports:', error);
+        contentArea.innerHTML = '<h1>Error loading reports</h1>';
+    }
+}
+
+// Settings View
+function loadSettingsView() {
+    const contentArea = document.getElementById('content-area');
+    contentArea.innerHTML = `
+            < div class= "header-actions" >
+            <h1>Settings</h1>
+        </div >
+
+            <div class="card">
+                <h2>Application Settings</h2>
+                <p style="color: var(--text-color); margin-top: 16px;">Settings and configuration options coming soon...</p>
+            </div>
+    `;
+}
+
+
+// Helper Functions
+function formatCurrency(value) {
+    return new Intl.NumberFormat('en-IN', {
+        style: 'currency',
+        currency: 'INR',
+        maximumFractionDigits: 0
+    }).format(value || 0);
+}
+
+function formatDate(dateString) {
+    if (!dateString) return '-';
+    return new Date(dateString).toLocaleDateString('en-IN');
+}
+
+// Modal Functions
+function addInvestorModal() {
+    if (document.getElementById('investor-modal')) return;
+
+    const modal = document.createElement('div');
+    modal.id = 'investor-modal';
+    modal.className = 'modal hidden';
+    modal.innerHTML = `
+            < div class= "modal-content" >
+            <div class="modal-header">
+                <h2>Add/Edit Investor</h2>
+                <button class="close" onclick="closeModal('investor-modal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="investor-form">
+                <input type="hidden" id="investor-id">
+                <div class="form-group">
+                    <label>Name *</label>
+                    <input type="text" id="investor-name" required>
+                </div>
+                <div class="form-group">
+                    <label>UPI ID</label>
+                    <input type="text" id="investor-upi">
+                </div>
+                <div class="form-group">
+                    <label>Family Group</label>
+                    <select id="investor-group">
+                        <option>Family</option>
+                        <option>Friends</option>
+                        <option>Relatives</option>
+                        <option>Self</option>
+                        <option>Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Banks (comma-separated)</label>
+                    <input type="text" id="investor-banks" placeholder="e.g. HDFC Bank, ICICI Bank, SBI">
+                </div>
+                <button type="submit" class="btn btn-primary">Save Investor</button>
+            </form>
+        </div >
+            `;
+    document.body.appendChild(modal);
+
+    document.getElementById('investor-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('investor-id').value;
+        const data = {
+            name: document.getElementById('investor-name').value,
+            upi: document.getElementById('investor-upi').value,
+            family_group: document.getElementById('investor-group').value,
+            banks: document.getElementById('investor-banks').value
+        };
+
+        const url = id ? `${ API_BASE } / investors / ${ id }` : `${ API_BASE } / investors`;
+        const method = id ? 'PUT' : 'POST';
+
+        await fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        closeModal('investor-modal');
+        loadInvestorsView();
+    });
+}
+
+function addIPOModal() {
+    if (document.getElementById('ipo-modal')) return;
+
+    const modal = document.createElement('div');
+    modal.id = 'ipo-modal';
+    modal.className = 'modal hidden';
+    modal.innerHTML = `
+        < div class= "modal-content" >
+            <div class="modal-header">
+                <h2>Add/Edit IPO</h2>
+                <button class="close" onclick="closeModal('ipo-modal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="ipo-form">
+                <input type="hidden" id="ipo-id">
+                <div class="form-group">
+                    <label>IPO Name *</label>
+                    <input type="text" id="ipo-name" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Type</label>
+                        <select id="ipo-type">
+                            <option>Mainboard</option>
+                            <option>SME</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select id="ipo-status">
+                            <option>Open</option>
+                            <option>Closed</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>IPO Date</label>
+                        <input type="date" id="ipo-date">
+                    </div>
+                    <div class="form-group">
+                        <label>Listing Date</label>
+                        <input type="date" id="ipo-listing-date">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Number of Shares *</label>
+                        <input type="number" id="ipo-shares" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Purchase Price *</label>
+                        <input type="number" step="0.01" id="ipo-buy-price" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Sale Price (optional)</label>
+                    <input type="number" step="0.01" id="ipo-sell-price">
+                </div>
+                <button type="submit" class="btn btn-primary">Save IPO</button>
+            </form>
+        </div >
+            `;
+    document.body.appendChild(modal);
+
+    document.getElementById('ipo-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('ipo-id').value;
+        const data = {
+            ipo_name: document.getElementById('ipo-name').value,
+            ipo_type: document.getElementById('ipo-type').value,
+            status: document.getElementById('ipo-status').value,
+            ipo_date: document.getElementById('ipo-date').value,
+            listing_date: document.getElementById('ipo-listing-date').value,
+            num_shares: parseInt(document.getElementById('ipo-shares').value),
+            purchase_price_per_share: parseFloat(document.getElementById('ipo-buy-price').value),
+            sale_price_per_share: document.getElementById('ipo-sell-price').value ? parseFloat(document.getElementById('ipo-sell-price').value) : null
+        };
+
+        const url = id ? `${ API_BASE } / ipos / ${ id }` : `${ API_BASE } / ipos`;
+        const method = id ? 'PUT' : 'POST';
+
+        await fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        closeModal('ipo-modal');
+        loadIPOsView();
+    });
+}
+
+function addApplicationModal() {
+    if (document.getElementById('application-modal')) return;
+
+    const modal = document.createElement('div');
+    modal.id = 'application-modal';
+    modal.className = 'modal hidden';
+    modal.innerHTML = `
+        < div class= "modal-content" >
+            <div class="modal-header">
+                <h2>Add/Edit Application</h2>
+                <button class="close" onclick="closeModal('application-modal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="application-form">
+                <input type="hidden" id="application-id">
+                <div class="form-group">
+                    <label>Investor *</label>
+                    <select id="app-investor" required>
+                        ${investors.map(i => `<option value="${i.id}">${i.name}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>IPO *</label>
+                    <select id="app-ipo" required>
+                        ${ipos.map(i => `<option value="${i.id}">${i.ipo_name}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Application Amount *</label>
+                    <input type="number" step="0.01" id="app-amount" required>
+                </div>
+                <div class="form-group">
+                    <label>Bank Name *</label>
+                    <select id="app-bank" required>
+                        <option value="">Select a bank</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select id="app-status">
+                            <option>Applied</option>
+                            <option>Allotted</option>
+                            <option>Not Allotted</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Payment Status</label>
+                        <select id="app-payment">
+                            <option>Pending</option>
+                            <option>Received</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">Save Application</button>
+            </form>
+        </div >
+            `;
+    document.body.appendChild(modal);
+
+    document.getElementById('application-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('application-id').value;
+        const data = {
+            investor_id: parseInt(document.getElementById('app-investor').value),
+            ipo_id: parseInt(document.getElementById('app-ipo').value),
+            application_amount: parseFloat(document.getElementById('app-amount').value),
+    modal.id = 'import-modal';
+    modal.className = 'modal hidden';
+    modal.innerHTML = `
+            < div class= "modal-content" >
+            <div class="modal-header">
+                <h2>Import Investors</h2>
+                <button class="close" onclick="closeModal('import-modal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="import-form">
+                <div class="form-group">
+                    <label>Excel File</label>
+                    <input type="file" id="import-file" accept=".xlsx,.xls" required>
+                </div>
+                <p style="font-size: 0.9rem; color: var(--text-color); margin-bottom: 20px;">
+                    <a href="#" onclick="downloadTemplate(event)" style="color: var(--secondary-color);">Download Template</a>
+                </p>
+                <button type="submit" class="btn btn-primary">Import</button>
+            </form>
+        </div >
+            `;
+    document.body.appendChild(modal);
+
+    document.getElementById('import-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const fileInput = document.getElementById('import-file');
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+
+        try {
+            const res = await fetch(`${ API_BASE } / investors /import `, {
+                method: 'POST',
+                body: formData
+            });
+            const result = await res.json();
+            alert(result.message || 'Import successful');
+            closeModal('import-modal');
+            loadInvestorsView();
+        } catch (error) {
+            alert('Import failed');
+        }
+    });
+}
+
+function openInvestorModal() {
+    document.getElementById('investor-id').value = '';
+    document.getElementById('investor-form').reset();
+    document.getElementById('investor-modal').classList.remove('hidden');
+}
+
+function openIPOModal() {
+    document.getElementById('ipo-id').value = '';
+    document.getElementById('ipo-form').reset();
+    document.getElementById('ipo-modal').classList.remove('hidden');
+}
+
+function openApplicationModal() {
+    document.getElementById('application-id').value = '';
+    document.getElementById('application-form').reset();
+    document.getElementById('application-modal').classList.remove('hidden');
+}
+
+function openImportModal() {
+    document.getElementById('import-modal').classList.remove('hidden');
+}
+
+function closeModal(modalId) {
+    document.getElementById(modalId).classList.add('hidden');
+}
+
+// Edit Functions
+function editInvestor(id) {
+    const inv = investors.find(i => i.id === id);
+    if (!inv) return;
+    document.getElementById('investor-id').value = inv.id;
+    document.getElementById('investor-name').value = inv.name;
+    document.getElementById('investor-upi').value = inv.upi || '';
+    document.getElementById('investor-group').value = inv.family_group;
+    document.getElementById('investor-banks').value = inv.banks || '';
+    document.getElementById('investor-modal').classList.remove('hidden');
+}
+
+function editIPO(id) {
+    const ipo = ipos.find(i => i.id === id);
+    if (!ipo) return;
+    document.getElementById('ipo-id').value = ipo.id;
+    document.getElementById('ipo-name').value = ipo.ipo_name;
+    document.getElementById('ipo-type').value = ipo.ipo_type || 'Mainboard';
+    document.getElementById('ipo-status').value = ipo.status || 'Open';
+    document.getElementById('ipo-date').value = ipo.ipo_date || '';
+    document.getElementById('ipo-listing-date').value = ipo.listing_date || '';
+    document.getElementById('ipo-shares').value = ipo.num_shares;
+    document.getElementById('ipo-buy-price').value = ipo.purchase_price_per_share;
+    document.getElementById('ipo-sell-price').value = ipo.sale_price_per_share || '';
+    document.getElementById('ipo-modal').classList.remove('hidden');
+}
+
+function editApplication(id) {
+    const app = applications.find(a => a.id === id);
+    if (!app) return;
+    document.getElementById('application-id').value = app.id;
+    document.getElementById('app-investor').value = app.investor_id;
+    document.getElementById('app-ipo').value = app.ipo_id;
+    document.getElementById('app-amount').value = app.application_amount;
+    document.getElementById('app-status').value = app.status;
+    document.getElementById('app-payment').value = app.payment_status;
+    document.getElementById('app-bank').value = app.bank_name || '';
+    document.getElementById('application-modal').classList.remove('hidden');
+}
+
+// Delete Functions
+async function deleteInvestor(id) {
+    if (confirm('Are you sure you want to delete this investor?')) {
+        await fetch(`${ API_BASE } / investors / ${ id }`, { method: 'DELETE' });
+        loadInvestorsView();
+    }
+}
+
+async function deleteIPO(id) {
+    if (confirm('Are you sure you want to delete this IPO?')) {
+        await fetch(`${ API_BASE } / ipos / ${ id }`, { method: 'DELETE' });
+        loadIPOsView();
+    }
+}
+
+async function deleteApplication(id) {
+    if (confirm('Are you sure you want to delete this application?')) {
+        await fetch(`${ API_BASE } / applications / ${ id }`, { method: 'DELETE' });
+        loadApplicationsView();
+    }
+}
+
+function downloadTemplate(e) {
+    e.preventDefault();
+    window.location.href = `${ API_BASE } / investors / template`;
+}

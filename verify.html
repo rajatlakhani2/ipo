@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Email — IPO Control</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .auth-page { min-height: 100vh; display: flex; align-items: center; justify-content: center;
+            background: linear-gradient(135deg, #0f172a, #312e81); padding: 2rem; }
+        .auth-card { background: white; border-radius: 20px; padding: 2.5rem; max-width: 420px; width: 100%; text-align: center; }
+        .auth-card h1 { color: #0f172a; margin-bottom: 1rem; }
+        .msg { color: #64748b; margin: 1rem 0; }
+        .success { color: #059669; }
+        .error { color: #ef4444; }
+    </style>
+</head>
+<body>
+    <div class="auth-page">
+        <div class="auth-card">
+            <h1><i class="fas fa-envelope-circle-check" style="color:#6366f1"></i> Email Verification</h1>
+            <p id="status" class="msg">Verifying...</p>
+            <a href="/login.html" class="btn btn-primary" style="display:inline-block;margin-top:1rem">Go to Sign In</a>
+        </div>
+    </div>
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const token = params.get('token');
+        const statusEl = document.getElementById('status');
+
+        if (!token) {
+            statusEl.textContent = 'Missing verification token.';
+            statusEl.className = 'msg error';
+        } else {
+            fetch('/api/auth/verify-email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token }),
+            })
+                .then(r => r.json().then(d => ({ ok: r.ok, d })))
+                .then(({ ok, d }) => {
+                    statusEl.textContent = ok ? d.message : (d.error || 'Verification failed');
+                    statusEl.className = ok ? 'msg success' : 'msg error';
+                })
+                .catch(() => {
+                    statusEl.textContent = 'Server unreachable.';
+                    statusEl.className = 'msg error';
+                });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,56 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-ipo}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ipo_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-ipo_control}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ipo} -d ${POSTGRES_DB:-ipo_control}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  web:
+    build: .
+    ports:
+      - "${APP_PORT:-5001}:5001"
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-ipo}:${POSTGRES_PASSWORD:-ipo_secret}@db:5432/${POSTGRES_DB:-ipo_control}
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:5001}
+      REQUIRE_EMAIL_VERIFICATION: ${REQUIRE_EMAIL_VERIFICATION:-false}
+      CORS_ORIGINS: ${CORS_ORIGINS:-*}
+      MAIL_SERVER: ${MAIL_SERVER:-}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_USE_TLS: ${MAIL_USE_TLS:-true}
+      MAIL_FROM: ${MAIL_FROM:-Family Office <noreply@localhost>}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      STRIPE_PRICE_ID_PRO: ${STRIPE_PRICE_ID_PRO:-}
+      KITE_API_KEY: ${KITE_API_KEY:-}
+      KITE_API_SECRET: ${KITE_API_SECRET:-}
+      KITE_REDIRECT_URL: ${KITE_REDIRECT_URL:-}
+      JWT_EXPIRY_HOURS: ${JWT_EXPIRY_HOURS:-168}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:5001/api/health')\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  postgres_data:

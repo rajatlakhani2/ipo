@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Family Office Dashboard — Sign In</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .auth-page {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #0a0e1a 0%, #0f172a 40%, #1a1520 100%);
+            padding: 2rem;
+        }
+        .auth-card {
+            background: rgba(30, 41, 59, 0.95);
+            border: 1px solid rgba(212, 168, 83, 0.2);
+            border-radius: 20px;
+            padding: 2.5rem;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.4), 0 0 60px rgba(212, 168, 83, 0.08);
+        }
+        .auth-card h1 { color: #f1f5f9; }
+        .auth-card p { color: #94a3b8; }
+        .auth-card label { color: #cbd5e1; }
+        .auth-card input { background: #0f172a; border-color: #334155; color: #f1f5f9; }
+        .tabs button { background: #1e293b; color: #94a3b8; }
+        .tabs button.active { background: linear-gradient(135deg, #d4a853, #b8860b); color: #0a0e1a; }
+        .auth-card h1 { color: #0f172a; margin-bottom: 0.5rem; font-size: 1.75rem; }
+        .auth-card p { color: #64748b; margin-bottom: 1.5rem; }
+        .tabs { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; }
+        .tabs button {
+            flex: 1;
+            padding: 0.5rem;
+            border: none;
+            background: #f1f5f9;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .tabs button.active { background: #6366f1; color: white; }
+        .auth-error { color: #ef4444; font-size: 0.875rem; margin-bottom: 1rem; display: none; }
+    </style>
+</head>
+<body>
+    <div class="auth-page">
+        <div class="auth-card">
+            <h1><i class="fas fa-crown" style="color:#d4a853"></i> Family Office</h1>
+            <p>Premium dashboard for family IPO operations, treasury &amp; portfolio intelligence</p>
+            <div class="tabs">
+                <button type="button" id="tab-login" class="active">Sign In</button>
+                <button type="button" id="tab-register">Register</button>
+            </div>
+            <div id="auth-error" class="auth-error"></div>
+            <div id="auth-success" class="auth-error" style="color:#059669;display:none"></div>
+            <form id="auth-form">
+                <div class="form-group" id="org-name-group" style="display:none">
+                    <label>Workspace Name</label>
+                    <input type="text" id="organization_name" placeholder="My IPO Desk">
+                </div>
+                <div class="form-group" id="full-name-group" style="display:none">
+                    <label>Full Name</label>
+                    <input type="text" id="full_name" placeholder="Your name">
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="email" required placeholder="you@company.com">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="password" required minlength="6" placeholder="Min 6 characters">
+                </div>
+                <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;padding:0.75rem">
+                    <span id="submit-label">Sign In</span>
+                </button>
+            </form>
+            <p id="resend-block" style="display:none;margin-top:1rem;font-size:0.875rem;text-align:center">
+                Didn't get the email?
+                <a href="#" id="resend-link" style="color:#6366f1">Resend verification</a>
+            </p>
+        </div>
+    </div>
+    <script src="api-client.js"></script>
+    <script>
+        let mode = 'login';
+        const tabLogin = document.getElementById('tab-login');
+        const tabRegister = document.getElementById('tab-register');
+        const orgGroup = document.getElementById('org-name-group');
+        const nameGroup = document.getElementById('full-name-group');
+        const errEl = document.getElementById('auth-error');
+        const okEl = document.getElementById('auth-success');
+        const resendBlock = document.getElementById('resend-block');
+        const submitLabel = document.getElementById('submit-label');
+        let lastEmail = '';
+
+        if (getToken()) window.location.href = '/';
+
+        if (new URLSearchParams(location.search).get('verified') === '1') {
+            okEl.textContent = 'Email verified! You can sign in now.';
+            okEl.style.display = 'block';
+        }
+
+        document.getElementById('resend-link').onclick = async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value.trim() || lastEmail;
+            if (!email) { errEl.textContent = 'Enter your email first'; errEl.style.display = 'block'; return; }
+            await fetch('/api/auth/resend-verification', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email }),
+            });
+            okEl.textContent = 'Verification email sent (check console in dev mode).';
+            okEl.style.display = 'block';
+        };
+
+        function setMode(m) {
+            mode = m;
+            tabLogin.classList.toggle('active', m === 'login');
+            tabRegister.classList.toggle('active', m === 'register');
+            orgGroup.style.display = m === 'register' ? 'block' : 'none';
+            nameGroup.style.display = m === 'register' ? 'block' : 'none';
+            submitLabel.textContent = m === 'login' ? 'Sign In' : 'Create Workspace';
+        }
+
+        tabLogin.onclick = () => setMode('login');
+        tabRegister.onclick = () => setMode('register');
+
+        document.getElementById('auth-form').onsubmit = async (e) => {
+            e.preventDefault();
+            errEl.style.display = 'none';
+            okEl.style.display = 'none';
+            resendBlock.style.display = 'none';
+            const email = document.getElementById('email').value.trim();
+            lastEmail = email;
+            const password = document.getElementById('password').value;
+            const path = mode === 'login' ? '/api/auth/login' : '/api/auth/register';
+            const body = { email, password };
+            if (mode === 'register') {
+                body.full_name = document.getElementById('full_name').value.trim();
+                body.organization_name = document.getElementById('organization_name').value.trim() || 'My IPO Workspace';
+            }
+            try {
+                const res = await fetch(path, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body),
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    errEl.textContent = data.error || 'Authentication failed';
+                    errEl.style.display = 'block';
+                    if (data.code === 'email_not_verified') resendBlock.style.display = 'block';
+                    return;
+                }
+                if (data.requires_verification) {
+                    okEl.textContent = data.message || 'Check your email to verify your account.';
+                    okEl.style.display = 'block';
+                    resendBlock.style.display = 'block';
+                    setMode('login');
+                    return;
+                }
+                saveSession(data);
+                window.location.href = '/';
+            } catch (err) {
+                errEl.textContent = 'Cannot reach server. Run: python app.py';
+                errEl.style.display = 'block';
+            }
+        };
+    </script>
+</body>
+</html>
