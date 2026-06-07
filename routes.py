@@ -2,7 +2,6 @@ import io
 import re
 from datetime import datetime
 
-import pandas as pd
 from flask import Blueprint, request, jsonify, send_file, g, current_app
 
 from extensions import db
@@ -366,6 +365,7 @@ def delete_investor(id):
 @api_bp.route('/investors/template', methods=['GET'])
 @require_auth()
 def investor_template():
+    import pandas as pd
     df = pd.DataFrame(columns=['Name', 'UPI ID', 'Family Group', 'Banks'])
     buf = io.BytesIO()
     df.to_excel(buf, index=False)
@@ -376,6 +376,7 @@ def investor_template():
 @api_bp.route('/investors/import', methods=['POST'])
 @require_write
 def import_investors():
+    import pandas as pd
     if 'file' not in request.files:
         return jsonify({'error': 'No file'}), 400
     file = request.files['file']
@@ -610,6 +611,7 @@ def bulk_status():
 @api_bp.route('/applications/bulk-import', methods=['POST'])
 @require_write
 def bulk_import_results():
+    import pandas as pd
     if 'file' not in request.files:
         return jsonify({'error': 'No file'}), 400
     ipo_id = request.form.get('ipo_id', type=int)
@@ -708,6 +710,7 @@ def export_applications():
             'Sell Price': a.sell_price or '',
             'Profit': a.profit,
         })
+    import pandas as pd
     df = pd.DataFrame(rows)
     buf = io.BytesIO()
     df.to_excel(buf, index=False)

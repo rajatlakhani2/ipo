@@ -4,10 +4,14 @@ BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 
 def _database_uri():
-    url = os.environ.get('DATABASE_URL', 'sqlite:///' + os.path.join(BASE_DIR, 'ipo_saas.sqlite'))
-    if url.startswith('postgres://'):
-        url = url.replace('postgres://', 'postgresql://', 1)
-    return url
+    url = os.environ.get('DATABASE_URL')
+    if url:
+        if url.startswith('postgres://'):
+            url = url.replace('postgres://', 'postgresql://', 1)
+        return url
+    data_dir = os.path.join(BASE_DIR, 'data')
+    os.makedirs(data_dir, exist_ok=True)
+    return 'sqlite:///' + os.path.join(data_dir, 'ipo_saas.sqlite')
 
 
 class Config:

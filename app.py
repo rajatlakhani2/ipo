@@ -23,12 +23,19 @@ def create_app():
     app.register_blueprint(broker_public_bp)
 
     with app.app_context():
-        from migrate_schema import apply_migrations
-        apply_migrations(app)
-        db.create_all()
-        _seed_upcoming_ipos()
-        from scheduler_service import start_background_jobs
-        start_background_jobs(app)
+        try:
+            from migrate_schema import apply_migrations
+            apply_migrations(app)
+            db.create_all()
+            _seed_upcoming_ipos()
+        except Exception as exc:
+            app.logger.error('Database init failed: %s', exc)
+        if os.environ.get('DISABLE_BACKGROUND_JOBS', '').lower() != 'true':
+            try:
+                from scheduler_service import start_background_jobs
+                start_background_jobs(app)
+            except Exception as exc:
+                app.logger.warning('Background jobs disabled: %s', exc)
 
     @app.route('/')
     def index():
@@ -89,8 +96,7 @@ def _seed_upcoming_ipos():
     db.session.commit()
 
 
-app = create_app()
-
 if __name__ == '__main__':
+    app = create_app()
     port = int(os.environ.get('PORT', 5001))
     app.run(debug=True, host='0.0.0.0', port=port)
