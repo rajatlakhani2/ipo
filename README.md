@@ -18,6 +18,7 @@ Open http://127.0.0.1:5001/login.html
 |--------|--------|
 | **SpidyHost / cPanel** | [SPIDYHOST.md](SPIDYHOST.md) |
 | **Kite, Stripe, Email (live)** | [LIVE_SETUP.md](LIVE_SETUP.md) |
+| **Zerodha + Upstox/Dhan portfolio** | [LIVE_PORTFOLIO.md](LIVE_PORTFOLIO.md) |
 | **Docker + PostgreSQL** | [DEPLOY.md](DEPLOY.md) / [PRODUCTION.md](PRODUCTION.md) |
 
 ## Stack
