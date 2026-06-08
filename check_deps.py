@@ -24,12 +24,15 @@ if missing:
     sys.exit(1)
 
 try:
-    from passenger_wsgi import application
+    from app import create_app
+    application = create_app()
     client = application.test_client()
     r = client.get('/api/health')
     print('Health:', r.status_code, r.get_json())
 except Exception as exc:
-    print('App startup failed:', exc)
+    import traceback
+    print('App startup failed:')
+    traceback.print_exc()
     sys.exit(1)
 
 print('All checks passed.')
