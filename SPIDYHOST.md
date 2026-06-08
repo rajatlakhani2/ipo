@@ -60,7 +60,7 @@ CORS_ORIGINS=https://yourdomain.com
 REQUIRE_EMAIL_VERIFICATION=false
 ```
 
-Optional: Stripe, mail, Zerodha Kite (`KITE_REDIRECT_URL=https://yourdomain.com/broker/zerodha/callback`).
+**Zerodha, Stripe, email:** see **[LIVE_SETUP.md](LIVE_SETUP.md)** — add keys in cPanel env vars only (never commit secrets to GitHub).
 
 **Database:** default is SQLite (`ipo_saas.sqlite` in app folder). For PostgreSQL, set `DATABASE_URL` if your plan includes it.
 

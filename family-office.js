@@ -884,7 +884,7 @@
             </div>
             ${kite.configured ? `<p style="font-size:0.8rem;opacity:0.75;margin-bottom:1rem"><i class="fas fa-check-circle" style="color:var(--fo-emerald)"></i> Zerodha Kite Connect ready · Redirect: <code>${kite.redirect_uri}</code></p>` : `
             <div class="fo-panel" style="margin-bottom:1rem;border-color:var(--fo-gold)">
-                <strong>Zerodha live sync</strong> — Add <code>KITE_API_KEY</code> and <code>KITE_API_SECRET</code> to <code>.env</code>.
+                <strong>Zerodha live sync</strong> — Add <code>KITE_API_KEY</code> and <code>KITE_API_SECRET</code> in cPanel env vars (see LIVE_SETUP.md).
                 <br><small>${kite.setup_hint}</small>
             </div>`}
             <div class="fo-hero" style="padding:1.5rem">
@@ -946,7 +946,7 @@
             if (nameSel.value === 'Zerodha' && kite.configured) {
                 hint.innerHTML = '<i class="fas fa-bolt"></i> Opens Zerodha login — live holdings via Kite Connect';
             } else if (nameSel.value === 'Zerodha') {
-                hint.textContent = 'Configure KITE_API_KEY in .env for live sync. Until then, demo holdings only.';
+                hint.textContent = 'Configure KITE_API_KEY in cPanel env vars for live sync. Until then, demo holdings only.';
             } else {
                 hint.textContent = 'Demo mode: sample holdings until Angel/Groww/Upstox OAuth is added.';
             }
