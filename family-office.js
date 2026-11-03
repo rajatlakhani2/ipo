@@ -411,7 +411,7 @@
                 <input type="hidden" id="fo-inv-id" value="${inv.id || ''}">
                 <div class="form-group"><label>Name *</label><input id="fo-inv-name" value="${inv.name || ''}" required></div>
                 <div class="form-row"><div class="form-group"><label>PAN</label><input id="fo-inv-pan" value="${inv.pan || ''}"></div>
-                <div class="form-group"><label>Demat</label><input id="fo-inv-demat" value="${inv.demat_account || ''}"></div></div>
+                <div class="form-group"><label>Demat Account ID (16)</label><input id="fo-inv-demat" value="${inv.demat_account || ''}" maxlength="16" autocomplete="off" placeholder="16 digits or IN + 14 digits"><small id="fo-inv-demat-msg" style="font-size:0.75rem"></small></div></div>
                 <div class="form-row"><div class="form-group"><label>Broker</label><input id="fo-inv-broker" value="${inv.broker || ''}"></div>
                 <div class="form-group"><label>UPI</label><input id="fo-inv-upi" value="${inv.upi || ''}"></div></div>
                 <div class="form-row"><div class="form-group"><label>Family Group</label><input id="fo-inv-fg" value="${inv.family_group || ''}"></div>
@@ -441,8 +441,30 @@
             renderContacts();
         };
         renderContacts();
+
+        // Demat / BO ID: exactly 16 chars — 16 digits (CDSL) or IN + 14 digits (NSDL)
+        const DEMAT_RE = /^(\d{16}|IN\d{14})$/;
+        const dematEl = document.getElementById('fo-inv-demat');
+        const dematMsg = document.getElementById('fo-inv-demat-msg');
+        const checkDemat = () => {
+            const v = dematEl.value.replace(/\s+/g, '').toUpperCase().replace(/[^0-9IN]/g, '').slice(0, 16);
+            if (dematEl.value !== v) dematEl.value = v;
+            const ok = !v || DEMAT_RE.test(v);
+            dematEl.style.borderColor = ok ? '' : '#dc2626';
+            dematMsg.style.color = ok ? '#16a34a' : '#dc2626';
+            dematMsg.textContent = !v ? '' : ok ? '✓ 16 / 16' : `${v.length} / 16 — must be exactly 16`;
+            return ok;
+        };
+        dematEl.addEventListener('input', checkDemat);
+        checkDemat();
+
         document.getElementById('fo-inv-form').onsubmit = async (e) => {
             e.preventDefault();
+            if (!checkDemat()) {
+                showToast('Demat Account ID must be exactly 16 characters', 'error');
+                dematEl.focus();
+                return;
+            }
             const body = {
                 name: document.getElementById('fo-inv-name').value,
                 pan: document.getElementById('fo-inv-pan').value,
@@ -458,7 +480,12 @@
                 contacts: window._foContacts.filter(c => c.name),
             };
             const iid = document.getElementById('fo-inv-id').value;
-            await apiFetch(`${FO}/investors${iid ? '/' + iid : ''}`, { method: iid ? 'PUT' : 'POST', body });
+            const res = await apiFetch(`${FO}/investors${iid ? '/' + iid : ''}`, { method: iid ? 'PUT' : 'POST', body });
+            if (res && !res.ok) {
+                const j = await res.json().catch(() => ({}));
+                showToast(j.error || 'Could not save investor', 'error');
+                return;
+            }
             closeFOModal();
             showToast('Investor saved', 'success');
             loadInvestorMasterView();

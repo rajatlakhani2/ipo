@@ -18,6 +18,7 @@ from ipo_service import (
     global_search,
 )
 from ipo_sync import sync_live_ipos
+from validators import normalize_demat
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
@@ -319,11 +320,14 @@ def add_investor():
     if not ok:
         return plan_limit_response(err, meta)
     data = request.json or {}
+    demat, err = normalize_demat(data.get('demat_account'))
+    if err:
+        return jsonify({'error': err}), 400
     inv = Investor(
         organization_id=g.organization_id,
         name=data['name'],
         pan=data.get('pan'),
-        demat_account=data.get('demat_account'),
+        demat_account=demat,
         broker=data.get('broker'),
         upi=data.get('upi'),
         family_group=data.get('family_group'),
@@ -344,6 +348,11 @@ def add_investor():
 def update_investor(id):
     inv = Investor.query.filter_by(id=id, organization_id=g.organization_id).first_or_404()
     data = request.json or {}
+    if 'demat_account' in data:
+        demat, err = normalize_demat(data['demat_account'])
+        if err:
+            return jsonify({'error': err}), 400
+        data['demat_account'] = demat
     for field in ['name', 'pan', 'demat_account', 'broker', 'upi', 'family_group',
                   'relationship', 'priority_rank', 'risk_category', 'profit_sharing_pct',
                   'is_active', 'banks']:

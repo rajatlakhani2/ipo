@@ -18,6 +18,7 @@ from advisor_service import advise
 from market_service import get_market_pulse, refresh_holdings_prices
 from registrar_service import registrar_info, list_registrars
 from ipo_enrich_service import enrich_ipo, compute_ipo_score as _compute_ipo_score
+from validators import normalize_demat
 
 fo_bp = Blueprint('family_office', __name__, url_prefix='/api/fo')
 
@@ -138,11 +139,14 @@ def investor_profile(id):
 @require_write
 def create_investor_fo():
     data = request.json or {}
+    demat, err = normalize_demat(data.get('demat_account'))
+    if err:
+        return jsonify({'error': err}), 400
     inv = Investor(
         organization_id=g.organization_id,
         name=data['name'],
         pan=data.get('pan'),
-        demat_account=data.get('demat_account'),
+        demat_account=demat,
         broker=data.get('broker'),
         upi=data.get('upi'),
         family_group=data.get('family_group'),
@@ -172,6 +176,11 @@ def create_investor_fo():
 def update_investor_fo(id):
     inv = Investor.query.filter_by(id=id, organization_id=g.organization_id).first_or_404()
     data = request.json or {}
+    if 'demat_account' in data:
+        demat, err = normalize_demat(data['demat_account'])
+        if err:
+            return jsonify({'error': err}), 400
+        data['demat_account'] = demat
     for field in ['name', 'pan', 'demat_account', 'broker', 'upi', 'family_group',
                   'relationship', 'priority_rank', 'risk_category', 'profit_sharing_pct',
                   'is_active', 'banks']:
@@ -963,7 +972,7 @@ def seed_demo_data():
     for i, inv in enumerate(investors):
         inv.priority_rank = i + 1
         inv.pan = f'ABCDE{i:04d}F'
-        inv.demat_account = f'IN300{i:06d}'
+        inv.demat_account = f'IN300{i:011d}'  # 16 chars: IN + 14 digits
         inv.broker = ['Zerodha', 'Angel One', 'Groww', 'Upstox', 'Zerodha'][i % 5]
         inv.risk_category = ['Low', 'Medium', 'Low', 'High', 'Medium'][i % 5]
         inv.relationship = ['Self', 'Spouse', 'Brother', 'Friend', 'Relative'][i % 5]
