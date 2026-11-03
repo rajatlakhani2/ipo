@@ -410,7 +410,7 @@
             <form id="fo-inv-form" class="form-row" style="display:grid;gap:0.75rem">
                 <input type="hidden" id="fo-inv-id" value="${inv.id || ''}">
                 <div class="form-group"><label>Name *</label><input id="fo-inv-name" value="${inv.name || ''}" required></div>
-                <div class="form-row"><div class="form-group"><label>PAN</label><input id="fo-inv-pan" value="${inv.pan || ''}"></div>
+                <div class="form-row"><div class="form-group"><label>PAN</label><input id="fo-inv-pan" value="${inv.pan || ''}" maxlength="10" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCDE1234F" style="text-transform:uppercase"><small id="fo-inv-pan-msg" style="font-size:0.75rem"></small></div>
                 <div class="form-group"><label>Demat Account ID (16)</label><input id="fo-inv-demat" value="${inv.demat_account || ''}" maxlength="16" autocomplete="off" placeholder="16 digits or IN + 14 digits"><small id="fo-inv-demat-msg" style="font-size:0.75rem"></small></div></div>
                 <div class="form-row"><div class="form-group"><label>Broker</label><input id="fo-inv-broker" value="${inv.broker || ''}"></div>
                 <div class="form-group"><label>UPI</label><input id="fo-inv-upi" value="${inv.upi || ''}"></div></div>
@@ -458,8 +458,36 @@
         dematEl.addEventListener('input', checkDemat);
         checkDemat();
 
+        // PAN: capital letters as typed, format ABCDE1234F
+        const PAN_RE = /^[A-Z]{5}\d{4}[A-Z]$/;
+        const panEl = document.getElementById('fo-inv-pan');
+        const panMsg = document.getElementById('fo-inv-pan-msg');
+        const checkPan = () => {
+            const pos = panEl.selectionStart;
+            const v = panEl.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10);
+            if (panEl.value !== v) {
+                panEl.value = v;
+                try { panEl.setSelectionRange(pos, pos); } catch (_) {}
+            }
+            const ok = !v || PAN_RE.test(v);
+            const partialOk = /^[A-Z]{0,5}$|^[A-Z]{5}\d{0,4}$|^[A-Z]{5}\d{4}[A-Z]?$/.test(v);
+            panEl.style.borderColor = ok || (partialOk && v.length < 10) ? '' : '#dc2626';
+            panMsg.style.color = ok ? '#16a34a' : (partialOk && v.length < 10 ? '#6b7280' : '#dc2626');
+            panMsg.textContent = !v ? '' : ok ? '✓ Valid PAN'
+                : partialOk ? `${v.length} / 10 — format ABCDE1234F`
+                : 'Format must be ABCDE1234F (5 letters, 4 digits, 1 letter)';
+            return ok;
+        };
+        panEl.addEventListener('input', checkPan);
+        checkPan();
+
         document.getElementById('fo-inv-form').onsubmit = async (e) => {
             e.preventDefault();
+            if (!checkPan()) {
+                showToast('PAN must be in the format ABCDE1234F', 'error');
+                panEl.focus();
+                return;
+            }
             if (!checkDemat()) {
                 showToast('Demat Account ID must be exactly 16 characters', 'error');
                 dematEl.focus();

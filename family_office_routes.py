@@ -18,7 +18,7 @@ from advisor_service import advise
 from market_service import get_market_pulse, refresh_holdings_prices
 from registrar_service import registrar_info, list_registrars
 from ipo_enrich_service import enrich_ipo, compute_ipo_score as _compute_ipo_score
-from validators import normalize_demat
+from validators import normalize_demat, normalize_pan
 
 fo_bp = Blueprint('family_office', __name__, url_prefix='/api/fo')
 
@@ -142,10 +142,13 @@ def create_investor_fo():
     demat, err = normalize_demat(data.get('demat_account'))
     if err:
         return jsonify({'error': err}), 400
+    pan, err = normalize_pan(data.get('pan'))
+    if err:
+        return jsonify({'error': err}), 400
     inv = Investor(
         organization_id=g.organization_id,
         name=data['name'],
-        pan=data.get('pan'),
+        pan=pan,
         demat_account=demat,
         broker=data.get('broker'),
         upi=data.get('upi'),
@@ -181,6 +184,11 @@ def update_investor_fo(id):
         if err:
             return jsonify({'error': err}), 400
         data['demat_account'] = demat
+    if 'pan' in data:
+        pan, err = normalize_pan(data['pan'])
+        if err:
+            return jsonify({'error': err}), 400
+        data['pan'] = pan
     for field in ['name', 'pan', 'demat_account', 'broker', 'upi', 'family_group',
                   'relationship', 'priority_rank', 'risk_category', 'profit_sharing_pct',
                   'is_active', 'banks']:
