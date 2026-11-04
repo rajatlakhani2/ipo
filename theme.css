@@ -255,3 +255,10 @@ body.fo-premium .toast { border-radius: 12px; font-family: var(--sh-font); }
 @media (prefers-reduced-motion: reduce) {
     body.fo-premium * { transition: none !important; }
 }
+
+/* inputs that sit inside their own styled wrapper keep the wrapper's look */
+body.fo-premium #content-area .ipc-search input,
+body.fo-premium #content-area .search-bar input {
+    background: none !important; border: 0 !important; box-shadow: none !important;
+    padding: 0 !important; min-height: 0 !important; border-radius: 0 !important;
+}
