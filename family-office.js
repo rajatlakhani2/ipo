@@ -190,10 +190,6 @@
             let [data, closing, quick] = await Promise.all([
                 foFetch('/home'), foFetch('/closing-ipos'), foFetch('/quick-actions'),
             ]);
-            if (!data.treasury?.bank_strip?.length) {
-                await apiFetch(`${FO}/seed-demo`, { method: 'POST', body: {} });
-                data = await foFetch('/home');
-            }
             const nw = data.net_worth || {};
             const t = data.treasury || {};
             const m = data.market_pulse || {};
@@ -351,6 +347,9 @@
             const out = [];
             if (inv.pan && !/^[A-Z]{5}\d{4}[A-Z]$/.test(inv.pan)) out.push('PAN');
             if (inv.demat_account && !/^(\d{16}|IN\d{14})$/.test(inv.demat_account)) out.push('Demat ID');
+            // Values the old automatic demo data wrote over real investors
+            if (/^ABCDE\d{4}F$/.test(inv.pan || '') && !out.includes('PAN')) out.push('PAN (demo value)');
+            if (/^IN300(0{5}|0{10})\d$/.test(inv.demat_account || '') && !out.includes('Demat ID')) out.push('Demat ID (demo value)');
             return out;
         };
         const needFix = allRows.filter(inv => issuesOf(inv).length);
@@ -363,7 +362,7 @@
             </div>
             ${needFix.length ? `
                 <div style="display:flex;align-items:center;justify-content:space-between;gap:0.75rem;flex-wrap:wrap;margin-bottom:1rem;padding:0.75rem 1rem;border-radius:8px;background:rgba(220,38,38,0.08);border:1px solid rgba(220,38,38,0.35);color:#dc2626;font-size:0.85rem">
-                    <span><i class="fas fa-exclamation-triangle"></i> <strong>${needFix.length}</strong> investor${needFix.length > 1 ? 's have' : ' has'} an invalid PAN or Demat ID. Open each one and click <strong>Edit</strong> to fix it.</span>
+                    <span><i class="fas fa-exclamation-triangle"></i> <strong>${needFix.length}</strong> investor${needFix.length > 1 ? 's have' : ' has'} a PAN or Demat ID that's invalid or looks like demo data. Open each one and click <strong>Edit</strong> to fix it.</span>
                     <button class="btn btn-secondary" onclick="window._foOnlyNeedsFix=!window._foOnlyNeedsFix;loadInvestorMasterView()">${onlyFix ? 'Show all' : 'Show only these'}</button>
                 </div>` : ''}
             <div class="fo-investor-grid">

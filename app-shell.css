@@ -41,6 +41,12 @@ body.fo-premium:not(.dark-mode) {
     --fo-border: #DCE3EC;
     --fo-text: #56657A;
     --fo-heading: #0E1726;
+    --fo-emerald: #10865A;
+    --fo-gold: #A86F00;
+    --fo-gold-light: #B97A00;
+    --fo-rose: #C8384A;
+    --fo-cyan: #0E7490;
+    --fo-violet: #6D4FC2;
 }
 
 /* sidebar ----------------------------------------------------------------- */

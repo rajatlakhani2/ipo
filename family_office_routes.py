@@ -964,8 +964,13 @@ def market_refresh():
 def seed_demo_data():
     """Seed rich demo data for family office dashboard."""
     org_id = g.organization_id
-    if BankAccount.query.filter_by(organization_id=org_id).count() > 0:
-        return jsonify({'message': 'Demo data already exists'})
+    # Only ever for a brand-new, empty account. It must never touch real records
+    # (it used to overwrite the first 5 investors' PAN/Demat with fake values).
+    has_data = (BankAccount.query.filter_by(organization_id=org_id).count()
+                or Investor.query.filter_by(organization_id=org_id).count()
+                or IPO.query.filter_by(organization_id=org_id).count())
+    if has_data:
+        return jsonify({'error': 'Demo data can only be added to an empty account'}), 409
     banks_data = [
         ('HDFC Bank', '****4521', 1200000, 950000, 250000, 1500000),
         ('ICICI Bank', '****8832', 800000, 650000, 150000, 1000000),
