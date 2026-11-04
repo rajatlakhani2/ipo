@@ -22,7 +22,7 @@ def _bootstrap_venv():
     for activate in sorted(glob.glob(os.path.join(venv_root, '*', 'bin', 'activate_this.py')), reverse=True):
         try:
             with open(activate, encoding='utf-8') as fh:
-                exec(f.read(), {'__file__': activate})
+                exec(fh.read(), {'__file__': activate})
             break
         except Exception:
             pass

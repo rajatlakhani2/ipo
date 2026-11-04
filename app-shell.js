@@ -113,6 +113,11 @@
         }, 200);
     });
 
+    // Installable app (Add to Home Screen)
+    if ('serviceWorker' in navigator && location.protocol === 'https:') {
+        window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+    }
+
     window.addEventListener('popstate', e => {
         const v = (e.state && e.state.view) || viewFromHash() || 'home';
         if (document.body.classList.contains('shell-menu-open')) { openMenu(false); }

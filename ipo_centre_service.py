@@ -204,7 +204,8 @@ def build_ipo_card(u, today, applied_by, active_investors):
 
 def ipo_centre(org_id, today=None):
     today = today or date.today()
-    rows = UpcomingIPO.query.filter_by(is_active=True).all()
+    rows = [u for u in UpcomingIPO.query.filter_by(is_active=True).all()
+            if not (u.source == 'manual' and (u.ipo_name or '').startswith('Sample '))]  # old placeholder rows
     applied_by = _org_applications(org_id)
     active = Investor.query.filter_by(organization_id=org_id, is_active=True).count()
 

@@ -526,6 +526,10 @@ def add_application():
     ).first()
     if existing:
         return jsonify({'error': 'Application already exists for this investor and IPO'}), 409
+    from validators import duplicate_pan_conflict
+    dup = duplicate_pan_conflict(g.organization_id, ipo.id, data['investor_id'])
+    if dup:
+        return jsonify({'error': dup}), 409
 
     amount = float(data.get('application_amount') or 0)
     bank = data.get('bank_name') or ''
@@ -640,7 +644,7 @@ def bulk_import_results():
     if not required.issubset(df.columns):
         return jsonify({'error': 'Columns required: Investor Name, Status'}), 400
 
-    updated, created = 0, 0
+    updated, created, skipped = 0, 0, 0
     for _, row in df.iterrows():
         name = str(row['Investor Name']).strip()
         status = str(row['Status']).strip()
@@ -666,6 +670,10 @@ def bulk_import_results():
                 app.allotted_at = datetime.utcnow()
             updated += 1
         else:
+            from validators import duplicate_pan_conflict
+            if duplicate_pan_conflict(g.organization_id, ipo_id, inv.id):
+                skipped += 1
+                continue
             amount = (ipo.num_shares or 0) * (ipo.purchase_price_per_share or 0)
             db.session.add(Application(
                 organization_id=g.organization_id,
@@ -679,7 +687,10 @@ def bulk_import_results():
             ))
             created += 1
     db.session.commit()
-    return jsonify({'message': f'Updated {updated}, created {created}'})
+    msg = f'Updated {updated}, created {created}'
+    if skipped:
+        msg += f', skipped {skipped} (same PAN or Demat already applied)'
+    return jsonify({'message': msg})
 
 
 @api_bp.route('/applications/listing-day', methods=['POST'])

@@ -18,7 +18,10 @@ PUBLIC_EXTENSIONS = {
     '.html', '.js', '.css', '.map',
     '.png', '.jpg', '.jpeg', '.gif', '.svg', '.ico', '.webp',
     '.woff', '.woff2', '.ttf', '.eot',
+    '.webmanifest',
 }
+import mimetypes
+mimetypes.add_type('application/manifest+json', '.webmanifest')
 # Folders whose contents are never public, even if a file has an allowed extension.
 PRIVATE_DIRS = {'data', 'tmp', 'nginx', 'venv', '.venv', '__pycache__', 'node_modules'}
 # Test / scratch pages that shouldn't be reachable on the live site.
@@ -52,7 +55,7 @@ def create_app():
             from migrate_schema import apply_migrations
             apply_migrations(app)
             db.create_all()
-            _seed_upcoming_ipos()
+            # (no fake 'Sample' IPOs: the IPO Centre shows only real, fetched issues)
         except Exception as exc:
             app.logger.error('Database init failed: %s', exc)
         if os.environ.get('DISABLE_BACKGROUND_JOBS', '').lower() != 'true':
@@ -90,11 +93,16 @@ def create_app():
         given = request.args.get('key', '') or request.headers.get('X-Cron-Key', '')
         if not expected or not hmac.compare_digest(expected, given):
             return jsonify({'error': 'Forbidden'}), 403
+        from backup_service import backup_if_due
+        try:
+            backup = backup_if_due(app)
+        except Exception as exc:  # a failed backup must not stop the IPO refresh
+            backup = {'backup': 'failed', 'reason': str(exc)}
         from family_office_routes import _run_sync_safely
         result = _run_sync_safely(app)
         if result is None:
-            return jsonify({'message': 'Sync already running'}), 202
-        return jsonify({k: v for k, v in result.items() if k != 'errors'} | {'error_count': len(result['errors'])})
+            return jsonify({'message': 'Sync already running', **backup}), 202
+        return jsonify({k: v for k, v in result.items() if k != 'errors'} | {'error_count': len(result['errors'])} | backup)
 
     @app.route('/api/health')
     def health():

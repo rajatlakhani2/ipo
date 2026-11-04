@@ -15,7 +15,7 @@ def _slugify(name):
 
 def create_token(user_id, organization_id, role, email):
     payload = {
-        'sub': user_id,
+        'sub': str(user_id),  # PyJWT 2.10+ requires a string subject
         'org_id': organization_id,
         'role': role,
         'email': email,
@@ -40,7 +40,7 @@ def require_auth(roles=None):
                 return jsonify({'error': 'Authentication required'}), 401
             try:
                 payload = decode_token(auth[7:])
-                g.user_id = payload['sub']
+                g.user_id = int(payload['sub'])
                 g.organization_id = payload['org_id']
                 g.role = payload.get('role', 'member')
                 g.user_email = payload.get('email')

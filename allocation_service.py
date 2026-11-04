@@ -107,8 +107,16 @@ def execute_allocation(org_id, ipo_id, investor_ids):
         if exists:
             errors.append({'investor_id': iid, 'error': 'Already applied'})
             continue
-        inv = Investor.query.get(iid)
-        bank = (inv.banks or '').split(',')[0].strip() if inv and inv.banks else None
+        inv = Investor.query.filter_by(id=iid, organization_id=org_id).first()  # never another account's investor
+        if not inv:
+            errors.append({'investor_id': iid, 'error': 'Investor not found'})
+            continue
+        from validators import duplicate_pan_conflict
+        dup = duplicate_pan_conflict(org_id, ipo_id, iid)
+        if dup:
+            errors.append({'investor_id': iid, 'error': dup})
+            continue
+        bank = (inv.banks or '').split(',')[0].strip() if inv.banks else None
         app = Application(
             organization_id=org_id,
             investor_id=iid,
