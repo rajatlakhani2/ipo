@@ -345,15 +345,31 @@
     async function loadInvestorMasterView() {
         const el = document.getElementById('content-area');
         el.innerHTML = '<div class="fo-panel">Loading investors...</div>';
-        const rows = await foFetch('/investors');
+        const allRows = await foFetch('/investors');
+        // Flag records saved before the PAN / Demat rules existed
+        const issuesOf = inv => {
+            const out = [];
+            if (inv.pan && !/^[A-Z]{5}\d{4}[A-Z]$/.test(inv.pan)) out.push('PAN');
+            if (inv.demat_account && !/^(\d{16}|IN\d{14})$/.test(inv.demat_account)) out.push('Demat ID');
+            return out;
+        };
+        const needFix = allRows.filter(inv => issuesOf(inv).length);
+        const onlyFix = window._foOnlyNeedsFix && needFix.length > 0;
+        const rows = onlyFix ? needFix : allRows;
         el.innerHTML = `
             <div class="fo-page-header">
                 <h1><i class="fas fa-users"></i> Investor Master</h1>
                 <button class="btn btn-primary" onclick="openFOInvestorModal()"><i class="fas fa-plus"></i> Add Investor</button>
             </div>
+            ${needFix.length ? `
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:0.75rem;flex-wrap:wrap;margin-bottom:1rem;padding:0.75rem 1rem;border-radius:8px;background:rgba(220,38,38,0.08);border:1px solid rgba(220,38,38,0.35);color:#dc2626;font-size:0.85rem">
+                    <span><i class="fas fa-exclamation-triangle"></i> <strong>${needFix.length}</strong> investor${needFix.length > 1 ? 's have' : ' has'} an invalid PAN or Demat ID. Open each one and click <strong>Edit</strong> to fix it.</span>
+                    <button class="btn btn-secondary" onclick="window._foOnlyNeedsFix=!window._foOnlyNeedsFix;loadInvestorMasterView()">${onlyFix ? 'Show all' : 'Show only these'}</button>
+                </div>` : ''}
             <div class="fo-investor-grid">
                 ${rows.map(inv => `
-                    <div class="fo-investor-card" onclick="openFOInvestorProfile(${inv.id})">
+                    <div class="fo-investor-card" onclick="openFOInvestorProfile(${inv.id})" ${issuesOf(inv).length ? 'style="border-color:#dc2626"' : ''}>
+                        ${issuesOf(inv).length ? `<div style="font-size:0.72rem;color:#dc2626;margin-bottom:0.4rem"><i class="fas fa-exclamation-circle"></i> Fix: ${issuesOf(inv).join(' & ')}</div>` : ''}
                         <div style="display:flex;justify-content:space-between;align-items:start">
                             <div>
                                 <span class="fo-priority-badge">#${inv.priority_rank || '—'}</span>

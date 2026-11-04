@@ -1,5 +1,5 @@
 import os
-from flask import Flask, send_file, jsonify
+from flask import Flask, send_file, send_from_directory, jsonify
 from flask_cors import CORS
 
 from config import Config
@@ -10,8 +10,33 @@ from family_office_routes import fo_bp
 from broker_routes import broker_public_bp
 
 
+APP_ROOT = os.path.dirname(os.path.abspath(__file__))
+
+# Only these file types may be served to browsers. Everything else in the app
+# folder (database, .env, .git, *.py, logs, Excel files, backups) stays private.
+PUBLIC_EXTENSIONS = {
+    '.html', '.js', '.css', '.map',
+    '.png', '.jpg', '.jpeg', '.gif', '.svg', '.ico', '.webp',
+    '.woff', '.woff2', '.ttf', '.eot',
+}
+# Folders whose contents are never public, even if a file has an allowed extension.
+PRIVATE_DIRS = {'data', 'tmp', 'nginx', 'venv', '.venv', '__pycache__', 'node_modules'}
+# Test / scratch pages that shouldn't be reachable on the live site.
+PRIVATE_FILES = {'test-dashboard.html', 'test-demo.html', 'attractive_dashboard.html'}
+
+
+def _is_public(path):
+    parts = path.replace('\\', '/').split('/')
+    if any(p in ('', '.', '..') or p.startswith('.') for p in parts):
+        return False  # hidden files (.env, .git, .htaccess) and traversal
+    if parts[0] in PRIVATE_DIRS or parts[-1] in PRIVATE_FILES:
+        return False
+    return os.path.splitext(parts[-1])[1].lower() in PUBLIC_EXTENSIONS
+
+
 def create_app():
-    app = Flask(__name__, static_folder='.', static_url_path='')
+    # static_folder=None: turn off Flask's built-in "serve everything" static route.
+    app = Flask(__name__, static_folder=None)
     app.config.from_object(Config)
     CORS(app, resources={r'/api/*': {'origins': Config.CORS_ORIGINS}})
 
@@ -51,12 +76,10 @@ def create_app():
 
     @app.route('/<path:path>')
     def static_files(path):
-        if path.startswith('api/'):
+        if path.startswith('api/') or not _is_public(path):
             return jsonify({'error': 'Not found'}), 404
-        try:
-            return send_file(path)
-        except FileNotFoundError:
-            return jsonify({'error': 'File not found'}), 404
+        # send_from_directory refuses paths that escape APP_ROOT
+        return send_from_directory(APP_ROOT, path)
 
     @app.route('/api/health')
     def health():
