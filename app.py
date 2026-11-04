@@ -81,6 +81,21 @@ def create_app():
         # send_from_directory refuses paths that escape APP_ROOT
         return send_from_directory(APP_ROOT, path)
 
+    @app.route('/api/cron/sync', methods=['GET', 'POST'])
+    def cron_sync():
+        """For a cPanel Cron Job: curl -s 'https://ipo.kuhu.org.in/api/cron/sync?key=YOUR_CRON_KEY'"""
+        import hmac
+        from flask import request
+        expected = os.environ.get('CRON_KEY', '')
+        given = request.args.get('key', '') or request.headers.get('X-Cron-Key', '')
+        if not expected or not hmac.compare_digest(expected, given):
+            return jsonify({'error': 'Forbidden'}), 403
+        from family_office_routes import _run_sync_safely
+        result = _run_sync_safely(app)
+        if result is None:
+            return jsonify({'message': 'Sync already running'}), 202
+        return jsonify({k: v for k, v in result.items() if k != 'errors'} | {'error_count': len(result['errors'])})
+
     @app.route('/api/health')
     def health():
         return jsonify({'status': 'ok', 'product': 'Family Office Dashboard'})

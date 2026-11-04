@@ -1,0 +1,205 @@
+/* App shell — sidebar, top bar and phone navigation, in the IPO Centre tokens. */
+
+:root {
+    --sh-bg: #0A0E1A;
+    --sh-panel: #0F1726;
+    --sh-rule: #1F2C42;
+    --sh-mist: #93A4BC;
+    --sh-paper: #EEF2F8;
+    --sh-marigold: #F2B33D;
+    --sh-tab-h: 64px;
+    --sh-font: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --sh-display: 'Bricolage Grotesque', 'Instrument Sans', system-ui, sans-serif;
+}
+body:not(.dark-mode) {
+    --sh-bg: #F3F5F9;
+    --sh-panel: #FFFFFF;
+    --sh-rule: #DCE3EC;
+    --sh-mist: #56657A;
+    --sh-paper: #0E1726;
+    --sh-marigold: #B97A00;
+}
+
+body.fo-premium { font-family: var(--sh-font); }
+body.fo-premium:not(.dark-mode) { background: var(--sh-bg); }
+
+/* the alerts panel only shows when opened */
+#fo-notif-panel.hidden { display: none !important; }
+body.fo-premium:not(.dark-mode) .org-badge { color: #0E1726; background: #E8EDF4; border-color: #DCE3EC; }
+
+/* light mode for the older screens (they were built dark-only) */
+body.fo-premium:not(.dark-mode) {
+    --bg-color: #F3F5F9;
+    --card-bg: #FFFFFF;
+    --text-color: #56657A;
+    --heading-color: #0E1726;
+    --border-color: #DCE3EC;
+    --fo-bg: #F3F5F9;
+    --fo-surface: #FFFFFF;
+    --fo-card: #FFFFFF;
+    --fo-card-hover: #F6F8FB;
+    --fo-border: #DCE3EC;
+    --fo-text: #56657A;
+    --fo-heading: #0E1726;
+}
+
+/* sidebar ----------------------------------------------------------------- */
+body.fo-premium .sidebar {
+    background: var(--sh-panel);
+    border-right: 1px solid var(--sh-rule);
+    backdrop-filter: none;
+}
+body.fo-premium .sidebar .logo {
+    font: 700 1.15rem/1 var(--sh-display);
+    letter-spacing: -.02em;
+    padding: 1.4rem 1.25rem 1.2rem;
+    border-bottom: 0;
+    background: none;
+    -webkit-text-fill-color: currentColor;
+    color: var(--sh-paper);
+    display: flex; align-items: center; gap: .6rem;
+}
+body.fo-premium .sidebar .logo i { color: var(--sh-marigold); }
+body.fo-premium .sidebar nav { overflow-y: auto; flex: 1; scrollbar-width: thin; }
+body.fo-premium .sidebar nav ul { padding: .25rem 0 1.5rem; margin: 0; }
+body.fo-premium .sidebar .fo-nav-section {
+    font: 600 .75rem/1 var(--sh-font);
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--sh-mist);
+    opacity: .75;
+    padding: 1.1rem 1.25rem .45rem;
+    margin: 0;
+    cursor: default;
+    background: none !important;
+    border: 0 !important;
+    transform: none !important;
+}
+body.fo-premium .sidebar nav li[data-view] {
+    margin: 1px .6rem;
+    padding: .6rem .7rem;
+    border-radius: 9px;
+    border: 0;
+    color: var(--sh-mist);
+    font-weight: 500;
+    font-size: .92rem;
+    gap: .75rem;
+    transition: background .12s, color .12s;
+}
+body.fo-premium .sidebar nav li[data-view] i { width: 1.1rem; text-align: center; opacity: .8; }
+body.fo-premium .sidebar nav li[data-view]:hover { background: color-mix(in srgb, var(--sh-mist) 10%, transparent); color: var(--sh-paper); transform: none; }
+body.fo-premium .sidebar nav li[data-view].active {
+    background: color-mix(in srgb, var(--sh-marigold) 14%, transparent);
+    color: var(--sh-paper);
+    border: 0;
+    font-weight: 600;
+}
+body.fo-premium .sidebar nav li[data-view].active i { color: var(--sh-marigold); opacity: 1; }
+body.fo-premium .sidebar nav li[data-view]:focus-visible { outline: 2px solid var(--sh-marigold); outline-offset: -2px; }
+
+/* top bar ------------------------------------------------------------------ */
+body.fo-premium .top-bar { background: transparent; border-bottom: 1px solid var(--sh-rule); backdrop-filter: none; }
+.shell-brand { display: none; }
+
+/* phone tab bar (hidden on desktop) */
+.shell-tabbar, .shell-scrim { display: none; }
+
+/* wide tables in any screen scroll sideways instead of breaking layout */
+#content-area .table-container, #content-area .fo-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+/* phones and small tablets -------------------------------------------------- */
+@media (max-width: 768px) {
+    body.fo-premium { padding-bottom: calc(var(--sh-tab-h) + env(safe-area-inset-bottom)); }
+    #particle-canvas { display: none; }
+    .app-container { display: block; min-height: 100vh; z-index: auto; } /* no stacking context, so the menu can rise above its scrim */
+    .main-content { overflow: visible; }
+
+    /* sidebar becomes a slide-out menu */
+    body.fo-premium .sidebar,
+    body.fo-premium .sidebar.collapsed {
+        position: fixed; z-index: 1001;
+        top: 0; bottom: 0; left: 0;
+        width: min(84vw, 320px);
+        transform: translateX(-102%);
+        transition: transform .25s cubic-bezier(.2, .8, .2, 1);
+        box-shadow: 12px 0 40px rgba(0, 0, 0, .35);
+        padding-bottom: calc(var(--sh-tab-h) + env(safe-area-inset-bottom));
+    }
+    body.fo-premium .sidebar.collapsed span { display: inline; }
+    body.shell-menu-open .sidebar { transform: none; }
+    .sidebar-toggle { display: none !important; }
+    .shell-scrim {
+        display: block; position: fixed; inset: 0; z-index: 1000;
+        background: rgba(5, 10, 20, .5);
+        opacity: 0; pointer-events: none; transition: opacity .2s;
+    }
+    body.shell-menu-open .shell-scrim { opacity: 1; pointer-events: auto; }
+    body.shell-menu-open { overflow: hidden; }
+
+    /* compact top bar: screen title + alerts + avatar */
+    body.fo-premium .top-bar {
+        position: sticky; top: 0; z-index: 50;
+        padding: .6rem 1rem;
+        padding-top: calc(.6rem + env(safe-area-inset-top));
+        background: var(--sh-bg);
+        gap: .5rem;
+    }
+    .shell-brand { display: flex; align-items: center; gap: .55rem; min-width: 0; flex: 1; }
+    .shell-mark { width: 10px; height: 10px; border-radius: 3px; background: var(--sh-marigold); flex-shrink: 0; transform: rotate(45deg); }
+    #shell-title { font: 700 1.05rem/1.2 var(--sh-display); color: var(--sh-paper); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -.01em; }
+    .top-bar .search-bar,
+    #fo-live-clock, #org-display-name, #fo-org-switcher, #user-display-name, #logout-btn { display: none !important; }
+    .top-bar .user-profile { gap: .35rem !important; flex-shrink: 0; }
+    .top-bar .btn-icon { width: 40px; height: 40px; }
+    #fo-notif-panel { right: .5rem !important; left: .5rem; width: auto !important; top: 56px !important; }
+
+    #content-area { padding: 1rem; }
+
+    /* bottom tab bar */
+    .shell-tabbar {
+        display: grid; grid-template-columns: repeat(5, 1fr);
+        position: fixed; left: 0; right: 0; bottom: 0; z-index: 1002;
+        height: calc(var(--sh-tab-h) + env(safe-area-inset-bottom));
+        padding-bottom: env(safe-area-inset-bottom);
+        background: color-mix(in srgb, var(--sh-panel) 94%, transparent);
+        -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+        border-top: 1px solid var(--sh-rule);
+    }
+    .shell-tabbar button {
+        display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+        background: none; border: 0; color: var(--sh-mist);
+        font: 600 .7rem/1 var(--sh-font); cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+        position: relative;
+    }
+    .shell-tabbar button i { font-size: 1.15rem; }
+    .shell-tabbar button.is-on { color: var(--sh-paper); }
+    .shell-tabbar button.is-on i { color: var(--sh-marigold); }
+    .shell-tabbar button.is-on::before {
+        content: ''; position: absolute; top: 0; left: 30%; right: 30%; height: 3px;
+        border-radius: 0 0 3px 3px; background: var(--sh-marigold);
+    }
+    .shell-tabbar button:focus-visible { outline: 2px solid var(--sh-marigold); outline-offset: -4px; border-radius: 10px; }
+
+    /* existing screens: make dense desktop layouts usable */
+    #content-area table:not(.ipc-table) { min-width: 560px; }
+    #content-area .table-container, #content-area .fo-panel, #content-area .card { overflow-x: auto; }
+    .fo-page-header { flex-wrap: wrap; gap: .75rem; }
+    .fo-page-header h1 { font-size: 1.4rem; }
+    .form-row, .fo-grid-2, .fo-grid-3, .fo-grid-4 { grid-template-columns: 1fr !important; }
+
+    /* modals become full-height sheets */
+    .modal { align-items: flex-end !important; padding: 0 !important; }
+    .modal .modal-content {
+        width: 100% !important; max-width: 100% !important;
+        max-height: 92vh; overflow-y: auto;
+        border-radius: 18px 18px 0 0 !important;
+        margin: 0 !important;
+        padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+    }
+    .modal input, .modal select, .modal textarea { font-size: 16px; min-height: 44px; } /* no iOS zoom-on-focus */
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body.fo-premium .sidebar { transition: none !important; }
+}

@@ -107,6 +107,9 @@ def _extract_next_data(html):
 
 def _ipo_record(**kwargs):
     return {
+        'symbol': kwargs.get('symbol'),
+        'exchange': kwargs.get('exchange'),
+        'issue_size': kwargs.get('issue_size'),
         'ipo_name': kwargs.get('ipo_name'),
         'ipo_type': kwargs.get('ipo_type', 'Mainboard'),
         'ipo_status': kwargs.get('ipo_status', 'upcoming'),
@@ -357,7 +360,8 @@ def fetch_sharemarketipo_ipos():
 
 def _merge_ipo(combined, item):
     """Merge by normalized name; higher-priority source wins."""
-    key = item['ipo_name'].lower().strip()
+    from gmp_scraper import normalize_name
+    key = normalize_name(item['ipo_name']) or item['ipo_name'].lower().strip()
     existing = combined.get(key)
     if not existing:
         combined[key] = item
@@ -379,8 +383,12 @@ def fetch_all_live_ipos():
     all_errors = []
     combined = {}
 
+    def fetch_nse_all():
+        import nse_client
+        return nse_client.fetch_all()
+
     fetchers = (
-        fetch_nse_ipos,
+        fetch_nse_all,
         fetch_moneycontrol_ipos,
         fetch_chittorgarh_dashboard,
         fetch_sharemarketipo_ipos,

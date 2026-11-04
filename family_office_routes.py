@@ -789,18 +789,19 @@ def quick_actions():
 def refresh_all_gmp():
     from gmp_scraper import fetch_gmp_table
     from ipo_enrich_service import enrich_ipo
-    gmp_map = fetch_gmp_table()
+    from gmp_scraper import lookup_gmp
+    gmp_map, _errors = fetch_gmp_table()
     ipos = IPO.query.filter_by(organization_id=g.organization_id).all()
     updated = 0
     for ipo in ipos:
-        from gmp_scraper import lookup_gmp
-        gmp = lookup_gmp(ipo.ipo_name, gmp_map)
+        gmp, _src = lookup_gmp(ipo.ipo_name, gmp_map)
         if gmp is not None:
             ipo.gmp = gmp
+            ipo.expected_listing_gain = None  # recompute from the fresh GMP
+            updated += 1
         enrich_ipo(ipo, organization_id=g.organization_id)
-        updated += 1
     db.session.commit()
-    return jsonify({'message': f'Refreshed GMP for {updated} IPOs', 'gmp_sources': len(gmp_map)})
+    return jsonify({'message': f'Live GMP found for {updated} of {len(ipos)} IPOs', 'gmp_sources': len(gmp_map)})
 
 
 @fo_bp.route('/alerts/send-digest', methods=['POST'])
@@ -1001,3 +1002,57 @@ def seed_demo_data():
     db.session.add(WealthAsset(organization_id=org_id, asset_type='ETF', name='Nifty Bees', value=320000))
     db.session.commit()
     return jsonify({'message': 'Demo data seeded'})
+
+
+# ---------- IPO Centre ----------
+
+import threading as _threading
+
+_sync_lock = _threading.Lock()
+
+
+def _run_sync_safely(app):
+    if not _sync_lock.acquire(blocking=False):
+        return None  # a sync is already running
+    try:
+        with app.app_context():
+            from ipo_sync import sync_live_ipos
+            return sync_live_ipos()
+    finally:
+        _sync_lock.release()
+
+
+def _last_sync_age_minutes():
+    from models import UpcomingIPO
+    last = db.session.query(db.func.max(UpcomingIPO.last_synced_at)).scalar()
+    return None if not last else (datetime.utcnow() - last).total_seconds() / 60
+
+
+@fo_bp.route('/ipo-centre', methods=['GET'])
+@require_auth()
+def ipo_centre_data():
+    from flask import current_app
+    from ipo_centre_service import ipo_centre
+    age = _last_sync_age_minutes()
+    syncing = False
+    if age is None or age > 30:
+        # Stale: refresh in the background so this page still loads instantly.
+        app = current_app._get_current_object()
+        _threading.Thread(target=_run_sync_safely, args=(app,), daemon=True).start()
+        syncing = True
+    data = ipo_centre(g.organization_id)
+    data['syncing'] = syncing
+    return jsonify(data)
+
+
+@fo_bp.route('/ipo-centre/refresh', methods=['POST'])
+@require_write
+def ipo_centre_refresh():
+    from flask import current_app
+    from ipo_centre_service import ipo_centre
+    result = _run_sync_safely(current_app._get_current_object())
+    if result is None:
+        return jsonify({'message': 'Already refreshing — try again in a minute'}), 409
+    data = ipo_centre(g.organization_id)
+    data['sync'] = result
+    return jsonify(data)

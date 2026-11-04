@@ -556,6 +556,18 @@ class UpcomingIPO(db.Model):
     is_active = db.Column(db.Boolean, default=True)
     last_synced_at = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    # IPO Centre
+    symbol = db.Column(db.String(50))
+    exchange = db.Column(db.String(20))           # NSE, BSE, NSE/BSE
+    issue_size = db.Column(db.String(100))
+    gmp = db.Column(db.Float)                     # real scraped GMP only, never estimated
+    gmp_source = db.Column(db.String(50))
+    gmp_updated_at = db.Column(db.DateTime)
+    subscription_json = db.Column(db.Text)        # {"retail": 12.3, "shni": .., "bhni": .., "nii": .., "qib": .., "employee": .., "total": ..}
+    subscription_updated_at = db.Column(db.DateTime)
+    listing_price = db.Column(db.Float)
+    current_price = db.Column(db.Float)
+    registrar = db.Column(db.String(100))
 
     __table_args__ = (
         db.UniqueConstraint('source', 'external_id', name='uq_ipo_source_external'),
@@ -578,4 +590,23 @@ class UpcomingIPO(db.Model):
             'source_url': self.source_url,
             'total_subscription': self.total_subscription,
             'last_synced_at': self.last_synced_at.isoformat() if self.last_synced_at else None,
+            'symbol': self.symbol,
+            'exchange': self.exchange,
+            'issue_size': self.issue_size,
+            'gmp': self.gmp,
+            'gmp_source': self.gmp_source,
+            'gmp_updated_at': self.gmp_updated_at.isoformat() if self.gmp_updated_at else None,
+            'subscription': self.subscription,
+            'subscription_updated_at': self.subscription_updated_at.isoformat() if self.subscription_updated_at else None,
+            'listing_price': self.listing_price,
+            'current_price': self.current_price,
+            'registrar': self.registrar,
         }
+
+    @property
+    def subscription(self):
+        import json
+        try:
+            return json.loads(self.subscription_json) if self.subscription_json else {}
+        except (ValueError, TypeError):
+            return {}
